@@ -2,7 +2,6 @@ package akatec
 
 import (
 	"context"
-	"log"
 	"sort"
 
 	svcNetList "github.com/apiheat/go-edgegrid/v6/service/netlistv2"
@@ -67,7 +66,15 @@ func resourceNetlistIP() *schema.Resource {
 }
 
 func resourceNetlistDeleteCtx(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	api := m.(*AkamaiServices)
+
 	var diags diag.Diagnostics
+
+	_, err := api.netlistV2.DeleteNetworkList(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+
+	}
 
 	return diags
 }
@@ -138,14 +145,12 @@ func resourceNetlistCreateCtx(ctx context.Context, d *schema.ResourceData, m int
 	netlistName := d.Get("name").(string)
 	netlistType := "IP"
 	netlistDesc := d.Get("description").(string)
-	netlistAcg := d.Get("acg").(string)
 
 	netlistCreateOpts := svcNetList.NetworkListsOptionsv2{
-		Name:               netlistName,
-		AccessControlGroup: netlistAcg,
-		Type:               netlistType,
-		Description:        netlistDesc,
-		List:               cidrBlocks,
+		Name:        netlistName,
+		Type:        netlistType,
+		Description: netlistDesc,
+		List:        cidrBlocks,
 	}
 
 	newList, err := api.netlistV2.CreateNetworkList(netlistCreateOpts)
@@ -170,43 +175,60 @@ func resourceNetlistCreateCtx(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceNetlistUpdateCtx(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	// c := m.(*AkamaiServices)
+	api := m.(*AkamaiServices)
 
-	// listID := d.Id()
-	// listType := d.Get("type").(string)
+	netlistID := d.Id()
 
-	// listOpts := edgegrid.ListNetworkListsOptions{
-	// 	Extended:          false,
-	// 	IncludeDeprecated: false,
-	// 	TypeOflist:        listType,
-	// 	IncludeElements:   true,
-	// }
+	netlistOpts := svcNetList.ListNetworkListsOptionsv2{
+		TypeOflist:      "IP",
+		Extended:        true,
+		IncludeElements: true,
+		Search:          "",
+	}
 
-	// existingNetList, _, err := c.NetworkLists.GetNetworkList(listID, listOpts)
-	// if err != nil {
-	// 	return err
-	// }
+	netlist, err := api.netlistV2.GetNetworkList(netlistID, netlistOpts)
+	if err != nil {
 
-	// if d.HasChange("description") {
-	// 	existingNetList.Description = d.Get("description").(string)
-	// }
+		netlistError := err.(*svcNetList.NetworkListErrorv2)
 
-	// if d.HasChange("items") {
-	// 	modifiedItems := []string{}
-	// 	for _, item := range d.Get("items").([]interface{}) {
-	// 		modifiedItems = append(modifiedItems, item.(string))
-	// 	}
+		return diag.Diagnostics{
+			diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  netlistError.Title,
+				Detail:   netlistError.Detail,
+			},
+		}
+	}
 
-	// 	sort.Strings(modifiedItems)
-	// 	existingNetList.List = modifiedItems
-	// }
+	if d.HasChange("description") {
+		netlist.Description = d.Get("description").(string)
+	}
 
-	// log.Printf("[DEBUG] update Akamai network list with ID %s", listID)
+	if d.HasChange("cidr_blocks") {
+		cidrBlocks := []string{}
+		for _, cidr := range d.Get("cidr_blocks").([]interface{}) {
+			cidrBlocks = append(cidrBlocks, cidr.(string))
+		}
+		netlist.List = cidrBlocks
+	}
 
-	// _, _, error := c.NetworkLists.ModifyNetworkList(listID, *existingNetList)
-	// if error != nil {
-	// 	return err
-	// }
+	if d.HasChange("name") {
+		netlist.Name = d.Get("name").(string)
+	}
+
+	_, err = api.netlistV2.ModifyNetworkList(*netlist)
+	if err != nil {
+
+		netlistError := err.(*svcNetList.NetworkListErrorv2)
+
+		return diag.Diagnostics{
+			diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  netlistError.Title,
+				Detail:   netlistError.Detail,
+			},
+		}
+	}
 
 	return resourceNetlistReadCtx(ctx, d, m)
 }
@@ -224,8 +246,6 @@ func resourceNetlistExists(d *schema.ResourceData, m interface{}) (bool, error) 
 	}
 
 	exists, err := c.netlistV2.GetNetworkList(netlistID, netlistOpts)
-	log.Printf("[INFO] akatec | read network list with ID %s", d.Id())
 
 	return exists != nil, err
-
 }
