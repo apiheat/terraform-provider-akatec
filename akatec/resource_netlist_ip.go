@@ -26,7 +26,19 @@ func resourceNetlistIP() *schema.Resource {
 			},
 			"acg": {
 				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"contract_id": {
+				Type:     schema.TypeString,
 				Optional: true,
+				RequiredWith: []string{
+					"group_id",
+				},
+			},
+			"group_id": {
+				Type:     schema.TypeInt,
+				Optional: true,
+				ForceNew: true,
 			},
 			"network": {
 				Type:     schema.TypeString,
@@ -51,12 +63,12 @@ func resourceNetlistIP() *schema.Resource {
 			},
 		},
 		SchemaVersion:      0,
-		CreateContext:      resourceNetlistCreateCtx,
-		ReadContext:        resourceNetlistReadCtx,
-		UpdateContext:      resourceNetlistUpdateCtx,
-		DeleteContext:      resourceNetlistDeleteCtx,
+		CreateContext:      resourceNetlistIPCreateCtx,
+		ReadContext:        resourceNetlistIPReadCtx,
+		UpdateContext:      resourceNetlistIPUpdateCtx,
+		DeleteContext:      resourceNetlistIPDeleteCtx,
 		StateUpgraders:     []schema.StateUpgrader{},
-		Exists:             resourceNetlistExists,
+		Exists:             resourceNetlistIPExists,
 		Importer:           &schema.ResourceImporter{},
 		DeprecationMessage: "",
 		Timeouts:           &schema.ResourceTimeout{},
@@ -65,7 +77,7 @@ func resourceNetlistIP() *schema.Resource {
 	}
 }
 
-func resourceNetlistDeleteCtx(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceNetlistIPDeleteCtx(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	api := m.(*AkamaiServices)
 
 	var diags diag.Diagnostics
@@ -79,7 +91,7 @@ func resourceNetlistDeleteCtx(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func resourceNetlistReadCtx(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceNetlistIPReadCtx(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	api := m.(*AkamaiServices)
 
 	var diags diag.Diagnostics
@@ -107,15 +119,15 @@ func resourceNetlistReadCtx(ctx context.Context, d *schema.ResourceData, m inter
 		return diag.FromErr(err)
 	}
 
+	if err := d.Set("acg", netlist.AccessControlGroup); err != nil {
+		return diag.FromErr(err)
+	}
+
 	if err := d.Set("network", "staging"); err != nil {
 		return diag.FromErr(err)
 	}
 
 	if err := d.Set("description", netlist.Description); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := d.Set("acg", netlist.AccessControlGroup); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -129,7 +141,7 @@ func resourceNetlistReadCtx(ctx context.Context, d *schema.ResourceData, m inter
 	return diags
 }
 
-func resourceNetlistCreateCtx(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceNetlistIPCreateCtx(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	api := m.(*AkamaiServices)
 
 	var diags diag.Diagnostics
@@ -153,6 +165,12 @@ func resourceNetlistCreateCtx(ctx context.Context, d *schema.ResourceData, m int
 		List:        cidrBlocks,
 	}
 
+	netlistGroupId, netlistGroupIdExist := d.GetOk("group_id")
+	if netlistGroupIdExist {
+		netlistCreateOpts.GroupID = netlistGroupId.(int)
+		netlistCreateOpts.ContractID = d.Get("contract_id").(string) // This attribute is required with group_id
+	}
+
 	newList, err := api.netlistV2.CreateNetworkList(netlistCreateOpts)
 	if err != nil {
 
@@ -169,12 +187,12 @@ func resourceNetlistCreateCtx(ctx context.Context, d *schema.ResourceData, m int
 
 	d.SetId(newList.UniqueID)
 
-	resourceNetlistReadCtx(ctx, d, m)
+	resourceNetlistIPReadCtx(ctx, d, m)
 
 	return diags
 }
 
-func resourceNetlistUpdateCtx(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceNetlistIPUpdateCtx(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	api := m.(*AkamaiServices)
 
 	netlistID := d.Id()
@@ -230,10 +248,10 @@ func resourceNetlistUpdateCtx(ctx context.Context, d *schema.ResourceData, m int
 		}
 	}
 
-	return resourceNetlistReadCtx(ctx, d, m)
+	return resourceNetlistIPReadCtx(ctx, d, m)
 }
 
-func resourceNetlistExists(d *schema.ResourceData, m interface{}) (bool, error) {
+func resourceNetlistIPExists(d *schema.ResourceData, m interface{}) (bool, error) {
 	c := m.(*AkamaiServices)
 
 	netlistID := d.Id()
