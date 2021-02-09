@@ -16,9 +16,11 @@ output "terraform_test_1" {
 resource "akatec_netlist_ip" "terraform_test_2" {
     
 	name        = "terraform-test-2"
-	acg 		= "xxxxxxx"
  	network     = "staging"
   	activate    = false
+
+	group_id = 12345
+	contract_id = "C-A27272"
 
  	description = "created-by-tf"
  	cidr_blocks = ["1.2.3.4/32", "9.8.7.6/32"]
