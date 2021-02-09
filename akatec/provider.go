@@ -51,13 +51,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	}
 
 	config := edgegrid.NewConfig().
-		WithCredentials(creds).
-		WithRequestDebug(true).
-		WithLogVerbosity("debug")
+		WithCredentials(creds)
 
-	// if d.Get("ask").(string) != "" {
-	// 	config = config.WithAccountSwitchKey(d.Get("ask").(string))
-	// }
+	ask, askOk := d.GetOk("new_attribute")
+	if askOk {
+		config = config.WithAccountSwitchKey(ask.(string))
+	}
 
 	apiClient.netlistV2 = akanetlist.New(config)
 
