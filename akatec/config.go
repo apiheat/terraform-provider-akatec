@@ -2,11 +2,13 @@ package akatec
 
 import (
 	edgegrid "github.com/apiheat/go-edgegrid/v6/edgegrid"
+	svcLds "github.com/apiheat/go-edgegrid/v6/service/ldsv3"
 	svcNetList "github.com/apiheat/go-edgegrid/v6/service/netlistv2"
 )
 
 type AkamaiServices struct {
 	netlistV2 *svcNetList.Netlistv2
+	ldsv3     *svcLds.Ldsv3
 }
 
 type Config struct {
@@ -21,6 +23,7 @@ func (c *Config) Client() (*AkamaiServices, error) {
 
 	clientSvc := AkamaiServices{
 		netlistV2: &svcNetList.Netlistv2{},
+		ldsv3:     &svcLds.Ldsv3{},
 	}
 	var err error
 
@@ -38,6 +41,7 @@ func (c *Config) Client() (*AkamaiServices, error) {
 	}
 
 	clientSvc.netlistV2 = svcNetList.New(config)
+	clientSvc.ldsv3 = svcLds.New(config)
 
 	return &clientSvc, nil
 }

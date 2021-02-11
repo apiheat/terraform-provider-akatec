@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	edgegrid "github.com/apiheat/go-edgegrid/v6/edgegrid"
+	akalds "github.com/apiheat/go-edgegrid/v6/service/ldsv3"
 	akanetlist "github.com/apiheat/go-edgegrid/v6/service/netlistv2"
 )
 
@@ -21,7 +22,8 @@ func Provider() *schema.Provider {
 			"akatec_netlist_ip": resourceNetlistIP(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"akatec_netlist_ip": dataSourceNetlistIP(),
+			"akatec_netlist_ip":  dataSourceNetlistIP(),
+			"akatec_lds_sources": dataSourceLdsSources(),
 		},
 
 		ProviderMetaSchema:   map[string]*schema.Schema{},
@@ -38,6 +40,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 
 	apiClient := AkamaiServices{
 		netlistV2: &akanetlist.Netlistv2{},
+		ldsv3:     &akalds.Ldsv3{},
 	}
 
 	creds, err := edgegrid.NewCredentials().FromFile(d.Get("edgerc").(string)).Section(d.Get("section").(string))
@@ -60,6 +63,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	// }
 
 	apiClient.netlistV2 = akanetlist.New(config)
+	apiClient.ldsv3 = akalds.New(config)
 
 	return &apiClient, diags
 
