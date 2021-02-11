@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func dataSourceNetlistIP() *schema.Resource {
+func dataSourceNetlistActivation() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceNetlistIPRead,
 		Schema: map[string]*schema.Schema{
@@ -55,8 +55,8 @@ func dataSourceNetlistIP() *schema.Resource {
 				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
-					// ValidateFunc: func(interface{}, string) ([]string, []error) {
-					// 	return nil, nil
+					// ValidateDiagFunc: func(interface{}, cty.Path) diag.Diagnostics {
+					// 	return nil
 					// },
 				},
 			},
@@ -64,7 +64,7 @@ func dataSourceNetlistIP() *schema.Resource {
 	}
 }
 
-func dataSourceNetlistIPRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func dataSourceNetlistActivationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	api := m.(*AkamaiServices)
 
 	var diags diag.Diagnostics // Warning or errors can be collected in a slice type
