@@ -23,8 +23,9 @@ func Provider() *schema.Provider {
 			"akatec_netlist_geo": resourceNetlistGeo(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"akatec_netlist_ip":  dataSourceNetlistIP(),
-			"akatec_lds_sources": dataSourceLdsSources(),
+			"akatec_netlist_ip":         dataSourceNetlistIP(),
+			"akatec_lds_sources":        dataSourceLdsSources(),
+			"akatec_lds_configurations": dataSourceLdsConfigurations(),
 		},
 
 		ProviderMetaSchema:   map[string]*schema.Schema{},
@@ -55,7 +56,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	}
 
 	config := edgegrid.NewConfig().
-		WithCredentials(creds)
+		WithCredentials(creds).WithLogVerbosity("Debug").WithRequestDebug(true)
 
 	ask, askOk := d.GetOk("new_attribute")
 	if askOk {

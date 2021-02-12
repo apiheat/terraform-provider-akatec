@@ -21,10 +21,10 @@ func dataSourceLdsSources() *schema.Resource {
 				Description: "List of logdelivery service sources",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"source_id":        {Type: schema.TypeString, Computed: true},
-						"source_type_name": {Type: schema.TypeString, Computed: true},
-						"source_cpcode":    {Type: schema.TypeString, Computed: true, Optional: true},
-						"source_products": {
+						"id":     {Type: schema.TypeString, Computed: true},
+						"type":   {Type: schema.TypeString, Computed: true},
+						"cpcode": {Type: schema.TypeString, Computed: true, Optional: true},
+						"products": {
 							Type:     schema.TypeList,
 							Optional: true,
 							Computed: true,
@@ -54,17 +54,17 @@ func dataLdsSourcesRead(ctx context.Context, d *schema.ResourceData, m interface
 	for _, src := range *sources {
 		if src.Type == "edns" {
 			srcList = append(srcList, map[string]interface{}{
-				"source_id":        src.ID,
-				"source_type_name": src.Type,
-				"source_cpcode":    "N/A",
-				"source_products":  src.Products,
+				"id":       src.ID,
+				"type":     src.Type,
+				"cpcode":   "N/A",
+				"products": src.Products,
 			})
 		} else {
 			srcList = append(srcList, map[string]interface{}{
-				"source_id":        src.ID,
-				"source_type_name": src.Type,
-				"source_cpcode":    src.CpCode,
-				"source_products":  src.Products,
+				"id":       src.ID,
+				"type":     src.Type,
+				"cpcode":   src.CpCode,
+				"products": src.Products,
 			})
 		}
 	}
