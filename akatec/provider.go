@@ -19,8 +19,9 @@ func Provider() *schema.Provider {
 			"ask":     {Type: schema.TypeString, Optional: true}},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"akatec_netlist_ip":  resourceNetlistIP(),
-			"akatec_netlist_geo": resourceNetlistGeo(),
+			"akatec_netlist_ip":        resourceNetlistIP(),
+			"akatec_netlist_geo":       resourceNetlistGeo(),
+			"akatec_lds_configuration": resourceLdsConfiguration(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"akatec_netlist_ip":         dataSourceNetlistIP(),
