@@ -149,7 +149,7 @@ func resourceLdsConfiguration() *schema.Resource {
 		SchemaVersion:  0,
 		CreateContext:  resourceLdsConfigurationCreateCtx,
 		ReadContext:    resourceLdsConfigurationReadCtx,
-		UpdateContext:  resourceLdsConfigurationReadCtx,
+		UpdateContext:  resourceLdsConfigurationUpdateCtx,
 		DeleteContext:  resourceLdsConfigurationDeleteCtx,
 		StateUpgraders: []schema.StateUpgrader{},
 		Exists:         resourceConfigurationExists,
@@ -239,25 +239,25 @@ func resourceLdsConfigurationUpdateCtx(ctx context.Context, d *schema.ResourceDa
 
 	}
 
-	newID, err := api.ldsv3.UpdateLogConfiguration(d.Id(), body)
+	id := d.Id()
+
+	_, err = api.ldsv3.UpdateLogConfiguration(id, body)
 	if err != nil {
 		return diag.FromErr(err)
 
 	}
 
-	d.SetId(newID)
-
 	// Now we need to handle status of log delivery
 	if d.HasChange("status") {
 		switch d.Get("status").(string) {
 		case "active":
-			err := api.ldsv3.SuspendLogConfiguration(newID)
+			err := api.ldsv3.ResumeLogConfiguration(id)
 			if err != nil {
 				return diag.FromErr(err)
 
 			}
 		case "suspended":
-			err := api.ldsv3.SuspendLogConfiguration(newID)
+			err := api.ldsv3.SuspendLogConfiguration(id)
 			if err != nil {
 				return diag.FromErr(err)
 
@@ -266,6 +266,8 @@ func resourceLdsConfigurationUpdateCtx(ctx context.Context, d *schema.ResourceDa
 			return diag.FromErr(fmt.Errorf("Expired status cannot be set by user"))
 		}
 	}
+
+	d.SetId(id)
 
 	resourceLdsConfigurationReadCtx(ctx, d, m)
 
