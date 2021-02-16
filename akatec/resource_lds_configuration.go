@@ -1,12 +1,17 @@
 package akatec
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/apiheat/go-edgegrid/v6/service/ldsv3"
+	service "github.com/apiheat/go-edgegrid/v6/service/ldsv3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -57,7 +62,7 @@ func resourceLdsConfiguration() *schema.Resource {
 				Computed: true,
 			},
 			"delivery_residual_data": {
-				Type:     schema.TypeString,
+				Type:     schema.TypeBool,
 				Optional: true,
 				ConflictsWith: []string{
 					"delivery_frequency_id",
@@ -143,12 +148,12 @@ func resourceLdsConfiguration() *schema.Resource {
 			},
 		},
 		SchemaVersion:  0,
-		CreateContext:  resourceLdsConfigurationReadCtx,
+		CreateContext:  resourceLdsConfigurationCreateCtx,
 		ReadContext:    resourceLdsConfigurationReadCtx,
 		UpdateContext:  resourceLdsConfigurationReadCtx,
-		DeleteContext:  resourceLdsConfigurationReadCtx,
+		DeleteContext:  resourceLdsConfigurationDeleteCtx,
 		StateUpgraders: []schema.StateUpgrader{},
-		Exists:         resourceLdsConfigurationExists,
+		Exists:         resourceConfigurationExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -224,21 +229,21 @@ func flattenDeliveryDetailsData(l *ldsv3.ConfigurationsRespElem) map[string]inte
 		if idStr != "" {
 			lgs["cp_code"] = idStr
 		}
-	// case "email":
-	// 	if l.DeliveryDetails.EmailAddress != "" {
-	// 		lgs["email_address"] = l.DeliveryDetails.EmailAddress
-	// 	}
-	case "ftp":
-		if l.DeliveryDetails.DomainPrefix != "" {
-			lgs["domain_prefix"] = l.DeliveryDetails.DomainPrefix
-		}
-		if l.DeliveryDetails.Directory != "" {
-			lgs["directory"] = l.DeliveryDetails.Directory
-		}
-		idStr := strconv.Itoa(l.DeliveryDetails.CpcodeID)
-		if idStr != "" {
-			lgs["cp_code_id"] = idStr
-		}
+		// case "email":
+		// 	if l.DeliveryDetails.EmailAddress != "" {
+		// 		lgs["email_address"] = l.DeliveryDetails.EmailAddress
+		// 	}
+		// case "ftp":
+		// 	if l.DeliveryDetails.DomainPrefix != "" {
+		// 		lgs["domain_prefix"] = l.DeliveryDetails.DomainPrefix
+		// 	}
+		// 	if l.DeliveryDetails.Directory != "" {
+		// 		lgs["directory"] = l.DeliveryDetails.Directory
+		// 	}
+		// 	idStr := strconv.Itoa(l.DeliveryDetails.CpcodeID)
+		// 	if idStr != "" {
+		// 		lgs["cp_code_id"] = idStr
+		// 	}
 	}
 
 	return lgs
@@ -261,6 +266,166 @@ func resourceLdsConfigurationDeleteCtx(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 
 	}
+
+	return diags
+}
+
+func printJSON(str string) {
+	var prettyJSON bytes.Buffer
+	error := json.Indent(&prettyJSON, []byte(str), "", "    ")
+	if error != nil {
+		log.Println("JSON parse error: ", error)
+		return
+	}
+	log.Println(string(prettyJSON.Bytes()))
+	return
+}
+
+// OutputJSON displays output of query for alerts in JSON format
+func outputJSON(input interface{}) {
+	b, err := json.Marshal(input)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	printJSON(string(b))
+}
+
+func resourceLdsConfigurationCreateCtx(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	api := m.(*AkamaiServices)
+
+	lgsID := d.Get("log_source_id").(string)
+	lgsType := d.Get("log_source_type").(string)
+
+	logSource := service.GenericBodyMember{
+		ID:   lgsID,
+		Type: lgsType,
+	}
+
+	contactObj := d.Get("contact_details").(map[string]interface{})
+	contactDetails := service.ConfigurationBodyContactDetails{
+		MailAddresses: strings.Split(contactObj["email_addresses"].(string), ","),
+		Contact: service.GenericBodyMember{
+			ID: contactObj["id"].(string),
+		},
+	}
+
+	logFormatDetails := service.ConfigurationBodyLogFormatDetails{
+		LogIdentifier: d.Get("log_format_identifier").(string),
+		LogFormat: service.GenericBodyMember{
+			ID: d.Get("log_format_id").(string),
+		},
+	}
+
+	messageSize := service.GenericBodyMember{
+		ID: d.Get("message_size_id").(string),
+	}
+
+	aggrType := d.Get("aggregation_type").(string)
+	aggregationDetails := service.ConfigurationBodyAggregationDetails{
+		Type: aggrType,
+	}
+	switch aggrType {
+	case "byLogArrival":
+		freqID, getOk := d.GetOk("delivery_frequency_id")
+
+		if !getOk {
+			return diag.FromErr(fmt.Errorf("Missing required field `delivery_frequency_id` for aggregation type 'byLogArrival'"))
+		}
+
+		aggregationDetails.DeliveryFrequency = &service.GenericBodyMember{
+			ID: freqID.(string),
+		}
+	case "byHitTime":
+		dThr, getdT := d.GetOk("delivery_threshold")
+		dRdt, getdR := d.GetOk("delivery_residual_data")
+
+		if !getdT || !getdR {
+			err := fmt.Errorf("Missing one or both required fields 'delivery_threshold' or 'delivery_residual_data' for aggregation type 'byHitTime'")
+			return diag.FromErr(err)
+		}
+
+		aggregationDetails.DeliveryThreshold = &service.GenericBodyMember{
+			ID: dThr.(string),
+		}
+		aggregationDetails.DeliverResidualData = dRdt.(bool)
+	default:
+		return diag.FromErr(fmt.Errorf("Unsupported aggregation type"))
+	}
+
+	encodingObj := d.Get("encoding_details").(map[string]interface{})
+	encodingDetails := service.ConfigurationBodyEncodingDetails{
+		Encoding: service.GenericBodyMember{
+			ID: encodingObj["id"].(string),
+		},
+	}
+
+	if encodingObj["id"].(string) == "4" {
+		if key, getK := encodingObj["encoding_key"].(string); getK {
+			encodingDetails.EncodingKey = key
+
+			if key == "" {
+				return diag.FromErr(fmt.Errorf("Encoding key cannot be empty"))
+			}
+
+		}
+	}
+
+	dType := d.Get("delivery_type").(string)
+	deliveryDetails := service.ConfigurationBodyDeliveryDetails{
+		Type: dType,
+	}
+
+	deliveryObj := d.Get("delivery_details").(map[string]interface{})
+
+	switch dType {
+	case "email":
+		deliveryDetails.EmailAddress = ""
+	case "ftp":
+		deliveryDetails.Login = ""
+		deliveryDetails.Password = ""
+		deliveryDetails.Machine = ""
+		deliveryDetails.Directory = ""
+	case "httpsns4":
+		delCpCodeInt, err := strconv.Atoi(deliveryObj["cp_code"].(string))
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("Cannot convert delivery CP Code string value to integer"))
+		}
+		deliveryDetails.CpcodeID = delCpCodeInt
+		deliveryDetails.Directory = deliveryObj["directory"].(string)
+		deliveryDetails.DomainPrefix = deliveryObj["domain_prefix"].(string)
+	default:
+		return diag.FromErr(fmt.Errorf("Unsupported delivery type"))
+	}
+
+	body := service.ConfigurationBody{
+		StartDate:          d.Get("start_date").(string),
+		LogSource:          &logSource,
+		ContactDetails:     contactDetails,
+		LogFormatDetails:   logFormatDetails,
+		MessageSize:        messageSize,
+		AggregationDetails: aggregationDetails,
+		EncodingDetails:    encodingDetails,
+		DeliveryDetails:    deliveryDetails,
+	}
+
+	if d.Get("end_date").(string) != "" {
+		body.EndDate = d.Get("end_date").(string)
+	}
+
+	outputJSON(body)
+
+	id, err := api.ldsv3.CreateLogConfiguration(lgsID, lgsType, body)
+	if err != nil {
+		return diag.FromErr(err)
+
+	}
+
+	d.SetId(id)
+
+	resourceLdsConfigurationReadCtx(ctx, d, m)
 
 	return diags
 }
@@ -339,7 +504,7 @@ func resourceLdsConfigurationReadCtx(ctx context.Context, d *schema.ResourceData
 	}
 	switch configuration.AggregationDetails.Type {
 	case "byLogArrival":
-		if err := d.Set("delivery_frequency_details", configuration.AggregationDetails.DeliveryFrequency.ID); err != nil {
+		if err := d.Set("delivery_frequency_id", configuration.AggregationDetails.DeliveryFrequency.ID); err != nil {
 			return diag.FromErr(err)
 		}
 		if err := d.Set("delivery_frequency_name", configuration.AggregationDetails.DeliveryFrequency.Value); err != nil {
@@ -368,7 +533,7 @@ func resourceLdsConfigurationReadCtx(ctx context.Context, d *schema.ResourceData
 	return diags
 }
 
-func resourceLdsConfigurationExists(d *schema.ResourceData, m interface{}) (bool, error) {
+func resourceConfigurationExists(d *schema.ResourceData, m interface{}) (bool, error) {
 	c := m.(*AkamaiServices)
 
 	id := d.Id()
