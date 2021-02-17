@@ -53,7 +53,7 @@ func resourceLdsConfiguration() *schema.Resource {
 				Optional: true,
 				ConflictsWith: []string{
 					"delivery_residual_data",
-					"delivery_threshold",
+					"delivery_threshold_id",
 				},
 			},
 			"delivery_frequency_name": {
@@ -67,12 +67,16 @@ func resourceLdsConfiguration() *schema.Resource {
 					"delivery_frequency_id",
 				},
 			},
-			"delivery_threshold": {
+			"delivery_threshold_id": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ConflictsWith: []string{
 					"delivery_frequency_id",
 				},
+			},
+			"delivery_threshold_name": {
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 			"log_source_id": {
 				Type:     schema.TypeString,
@@ -291,9 +295,9 @@ func resourceLdsConfigurationReadCtx(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	// if err := d.Set("end_date", configuration.EndDate); err != nil {
-	// 	return diag.FromErr(err)
-	// }
+	if err := d.Set("end_date", configuration.EndDate); err != nil {
+		return diag.FromErr(err)
+	}
 
 	if err := d.Set("status", configuration.Status); err != nil {
 		return diag.FromErr(err)
@@ -309,12 +313,12 @@ func resourceLdsConfigurationReadCtx(ctx context.Context, d *schema.ResourceData
 	if err := d.Set("name", configuration.LogSource.CpCode); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("log_source_details", flattenLogSourceDetailsData(configuration)); err != nil {
+	if err := d.Set("log_source_details", flattenLogSourceDetailsData(&configuration.LogSource)); err != nil {
 		return diag.FromErr(err)
 	}
 
 	// Contact
-	if err := d.Set("contact_details", flattenContactDetailsData(configuration)); err != nil {
+	if err := d.Set("contact_details", flattenContactDetailsData(&configuration.ContactDetails)); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -338,7 +342,7 @@ func resourceLdsConfigurationReadCtx(ctx context.Context, d *schema.ResourceData
 	}
 
 	// Encodings
-	if err := d.Set("encoding_details", flattenEncodingDetailsData(configuration)); err != nil {
+	if err := d.Set("encoding_details", flattenEncodingDetailsData(&configuration.EncodingDetails)); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -354,21 +358,23 @@ func resourceLdsConfigurationReadCtx(ctx context.Context, d *schema.ResourceData
 		if err := d.Set("delivery_frequency_name", configuration.AggregationDetails.DeliveryFrequency.Value); err != nil {
 			return diag.FromErr(err)
 		}
-		// case "byHitTime":
-		// 	lgs["deliver_residual_data"] = l.AggregationDetails.DeliverResidualData
-		// 	if l.AggregationDetails.DeliveryThreshold.ID != "" {
-		// 		lgs["id"] = l.AggregationDetails.DeliveryThreshold.ID
-		// 	}
-		// 	if l.AggregationDetails.DeliveryThreshold.Value != "" {
-		// 		lgs["name"] = l.AggregationDetails.DeliveryThreshold.Value
-		// 	}
+	case "byHitTime":
+		if err := d.Set("deliver_residual_data", configuration.AggregationDetails.DeliverResidualData); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("delivery_threshold_id", configuration.AggregationDetails.DeliveryThreshold.ID); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("delivery_threshold_name", configuration.AggregationDetails.DeliveryThreshold.Value); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	// Delivery
 	if err := d.Set("delivery_type", configuration.DeliveryDetails.Type); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("delivery_details", flattenDeliveryDetailsData(configuration)); err != nil {
+	if err := d.Set("delivery_details", flattenDeliveryDetailsData(&configuration.DeliveryDetails)); err != nil {
 		return diag.FromErr(err)
 	}
 

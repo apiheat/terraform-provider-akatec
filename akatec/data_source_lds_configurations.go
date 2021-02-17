@@ -3,6 +3,7 @@ package akatec
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -24,17 +25,13 @@ func dataSourceLdsConfigurations() *schema.Resource {
 				}, false),
 			},
 			"configurations": {
-				Type:        schema.TypeSet,
+				Type:        schema.TypeList,
 				Computed:    true,
-				Description: "List of logdelivery service configurations",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id":                           {Type: schema.TypeInt, Computed: true},
-						"status":                       {Type: schema.TypeString, Computed: true},
-						"start_date":                   {Type: schema.TypeString, Computed: true},
-						"end_date":                     {Type: schema.TypeString, Computed: true},
-						"associated_log_source_id":     {Type: schema.TypeString, Computed: true},
-						"associated_log_source_cpcode": {Type: schema.TypeString, Computed: true},
+				Description: "List of log delivery service configurations",
+				Elem: &schema.Schema{
+					Type: schema.TypeMap,
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
 					},
 				},
 			},
@@ -60,15 +57,27 @@ func dataLdsConfigurationsRead(ctx context.Context, d *schema.ResourceData, m in
 	cfgsList := make([]map[string]interface{}, 0, len(*cfgs))
 
 	for _, cfg := range *cfgs {
-		cfgsList = append(cfgsList, map[string]interface{}{
-			"id":         cfg.ID,
-			"status":     cfg.Status,
-			"start_date": cfg.StartDate,
-			// Add once client will support that
-			"end_date":                     "N/A",
-			"associated_log_source_id":     cfg.LogSource.ID,
-			"associated_log_source_cpcode": cfg.LogSource.CpCode,
-		})
+		item := map[string]interface{}{
+			"id":              strconv.Itoa(cfg.ID),
+			"status":          cfg.Status,
+			"start_date":      cfg.StartDate,
+			"log_source_id":   cfg.LogSource.ID,
+			"log_source_type": cfg.LogSource.Type,
+		}
+		if cfg.EndDate != "" {
+			item["end_date"] = cfg.EndDate
+		}
+		switch cfg.LogSource.Type {
+		case "cpcode-products":
+			item["log_source_cpcode"] = cfg.LogSource.CpCode
+		case "answerx":
+			item["log_source_name"] = cfg.LogSource.Name
+		case "edns":
+			item["log_source_zone_name"] = cfg.LogSource.ZoneName
+		case "gtm":
+			item["log_source_property_name"] = cfg.LogSource.PropertyName
+		}
+		cfgsList = append(cfgsList, item)
 	}
 
 	if err := d.Set("configurations", cfgsList); err != nil {

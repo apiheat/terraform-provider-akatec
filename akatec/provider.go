@@ -24,9 +24,13 @@ func Provider() *schema.Provider {
 			"akatec_lds_configuration": resourceLdsConfiguration(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"akatec_netlist_ip":         dataSourceNetlistIP(),
-			"akatec_lds_sources":        dataSourceLdsSources(),
-			"akatec_lds_configurations": dataSourceLdsConfigurations(),
+			"akatec_netlist_ip":               dataSourceNetlistIP(),
+			"akatec_lds_sources":              dataSourceLdsSources(),
+			"akatec_lds_configurations":       dataSourceLdsConfigurations(),
+			"akatec_lds_log_formats":          dataSourceLdsLogFormats(),
+			"akatec_lds_log_format":           dataSourceLdsLogFormat(),
+			"akatec_lds_delivery_frequencies": dataSourceLdsDeliveryFrequencies(),
+			"akatec_lds_delivery_frequency":   dataSourceLdsDeliveryFrequency(),
 		},
 
 		ProviderMetaSchema:   map[string]*schema.Schema{},

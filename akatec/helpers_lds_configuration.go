@@ -14,32 +14,54 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func flattenLogSourceDetailsData(l *ldsv3.ConfigurationsRespElem) map[string]interface{} {
+func flattenLogSourceDetailsData(l *ldsv3.OutputSourcesElement) map[string]interface{} {
 	lgs := make(map[string]interface{})
 
-	if l.LogSource.CpCode != "" {
-		lgs["cp_code"] = l.LogSource.CpCode
+	// Required fields
+	if l.ID != "" {
+		lgs["id"] = l.ID
 	}
-	if len(l.LogSource.Products) != 0 {
-		sortedProducts := l.LogSource.Products
+	if l.ID != "" {
+		lgs["type"] = l.Type
+	}
+	if l.LogRetentionDays != 0 {
+		lgs["log_retention"] = strconv.Itoa(l.LogRetentionDays)
+	}
+
+	// CP Code typed
+	if l.CpCode != "" {
+		lgs["cp_code"] = l.CpCode
+	}
+	if len(l.Products) != 0 {
+		sortedProducts := l.Products
 		sort.Strings(sortedProducts)
 		lgs["products"] = strings.Join(sortedProducts, ",")
 	}
-	if l.LogSource.LogRetentionDays != 0 {
-		lgs["log_retention"] = strconv.Itoa(l.LogSource.LogRetentionDays)
+	// EDNS
+	if l.ZoneName != "" {
+		lgs["zone_name"] = l.ZoneName
 	}
+	// AnswerX typed
+	if l.Name != "" {
+		lgs["name"] = l.Name
+	}
+	// GTM typed
+	if l.PropertyName != "" {
+		lgs["property_name"] = l.PropertyName
+	}
+
 	return lgs
 }
 
-func flattenContactDetailsData(l *ldsv3.ConfigurationsRespElem) map[string]interface{} {
+func flattenContactDetailsData(l *ldsv3.ConfigurationBodyContactDetails) map[string]interface{} {
 	lgs := make(map[string]interface{})
 
-	if l.ContactDetails.Contact.ID != "" {
-		lgs["id"] = l.ContactDetails.Contact.ID
+	if l.Contact.ID != "" {
+		lgs["id"] = l.Contact.ID
 	}
 
-	if len(l.ContactDetails.MailAddresses) != 0 {
-		sorted := l.ContactDetails.MailAddresses
+	if len(l.MailAddresses) != 0 {
+		sorted := l.MailAddresses
 		sort.Strings(sorted)
 		lgs["email_addresses"] = strings.Join(sorted, ",")
 	}
@@ -47,60 +69,61 @@ func flattenContactDetailsData(l *ldsv3.ConfigurationsRespElem) map[string]inter
 	return lgs
 }
 
-func flattenEncodingDetailsData(l *ldsv3.ConfigurationsRespElem) map[string]interface{} {
+func flattenEncodingDetailsData(l *ldsv3.ConfigurationBodyEncodingDetails) map[string]interface{} {
 	lgs := make(map[string]interface{})
 
-	if l.EncodingDetails.Encoding.ID != "" {
-		lgs["id"] = l.EncodingDetails.Encoding.ID
+	if l.Encoding.ID != "" {
+		lgs["id"] = l.Encoding.ID
 	}
 
-	// ToDO: Uncomment encryption key later
-	// if l.EncodingDetails.Encoding.ID == 4 {
-	// 	if l.EncodingDetails.Encoding.EncodingKey != "" {
-	// 		lgs["encoding_key"] = l.EncodingDetails.Encoding.EncodingKey
-	// 	}
-	// }
+	if l.Encoding.ID == "4" {
+		if l.EncodingKey != "" {
+			lgs["encoding_key"] = l.EncodingKey
+		}
+	}
 
 	return lgs
 }
 
-func flattenDeliveryDetailsData(l *ldsv3.ConfigurationsRespElem) map[string]interface{} {
+func flattenDeliveryDetailsData(l *ldsv3.ConfigurationBodyDeliveryDetails) map[string]interface{} {
 	lgs := make(map[string]interface{})
 
-	switch l.DeliveryDetails.Type {
+	switch l.Type {
 	case "httpsns4":
-		if l.DeliveryDetails.DomainPrefix != "" {
-			lgs["domain_prefix"] = l.DeliveryDetails.DomainPrefix
+		if l.DomainPrefix != "" {
+			lgs["domain_prefix"] = l.DomainPrefix
 		}
-		if l.DeliveryDetails.Directory != "" {
-			lgs["directory"] = l.DeliveryDetails.Directory
+		if l.Directory != "" {
+			lgs["directory"] = l.Directory
 		}
-		idStr := strconv.Itoa(l.DeliveryDetails.CpcodeID)
+		idStr := strconv.Itoa(l.CpcodeID)
 		if idStr != "" {
 			lgs["cp_code"] = idStr
 		}
-		// case "email":
-		// 	if l.DeliveryDetails.EmailAddress != "" {
-		// 		lgs["email_address"] = l.DeliveryDetails.EmailAddress
-		// 	}
-		// case "ftp":
-		// 	if l.DeliveryDetails.DomainPrefix != "" {
-		// 		lgs["domain_prefix"] = l.DeliveryDetails.DomainPrefix
-		// 	}
-		// 	if l.DeliveryDetails.Directory != "" {
-		// 		lgs["directory"] = l.DeliveryDetails.Directory
-		// 	}
-		// 	idStr := strconv.Itoa(l.DeliveryDetails.CpcodeID)
-		// 	if idStr != "" {
-		// 		lgs["cp_code_id"] = idStr
-		// 	}
+	case "email":
+		if l.EmailAddress != "" {
+			lgs["email_address"] = l.EmailAddress
+		}
+	case "ftp":
+		if l.Directory != "" {
+			lgs["directory"] = l.Directory
+		}
+		if l.Login != "" {
+			lgs["login"] = l.Login
+		}
+		if l.Machine != "" {
+			lgs["machine"] = l.Machine
+		}
+		if l.Password != "" {
+			lgs["password"] = l.Password
+		}
 	}
 
 	return lgs
 }
 
 func setBody(d *schema.ResourceData) (body service.ConfigurationBody, errMsg error) {
-	logSource := service.GenericBodyMember{
+	logSource := service.LogSourceBodyMember{
 		ID:   d.Get("log_source_id").(string),
 		Type: d.Get("log_source_type").(string),
 	}
@@ -108,19 +131,19 @@ func setBody(d *schema.ResourceData) (body service.ConfigurationBody, errMsg err
 	contactObj := d.Get("contact_details").(map[string]interface{})
 	contactDetails := service.ConfigurationBodyContactDetails{
 		MailAddresses: strings.Split(contactObj["email_addresses"].(string), ","),
-		Contact: service.GenericBodyMember{
+		Contact: service.GenericConfigurationParameterElement{
 			ID: contactObj["id"].(string),
 		},
 	}
 
 	logFormatDetails := service.ConfigurationBodyLogFormatDetails{
 		LogIdentifier: d.Get("log_format_identifier").(string),
-		LogFormat: service.GenericBodyMember{
+		LogFormat: service.GenericConfigurationParameterElement{
 			ID: d.Get("log_format_id").(string),
 		},
 	}
 
-	messageSize := service.GenericBodyMember{
+	messageSize := service.GenericConfigurationParameterElement{
 		ID: d.Get("message_size_id").(string),
 	}
 
@@ -136,19 +159,19 @@ func setBody(d *schema.ResourceData) (body service.ConfigurationBody, errMsg err
 			return body, fmt.Errorf("Missing required field `delivery_frequency_id` for aggregation type 'byLogArrival'")
 		}
 
-		aggregationDetails.DeliveryFrequency = &service.GenericBodyMember{
+		aggregationDetails.DeliveryFrequency = &service.GenericConfigurationParameterElement{
 			ID: freqID.(string),
 		}
 	case "byHitTime":
-		dThr, getdT := d.GetOk("delivery_threshold")
+		dThr, getdT := d.GetOk("delivery_threshold_id")
 		dRdt, getdR := d.GetOk("delivery_residual_data")
 
 		if !getdT || !getdR {
-			err := fmt.Errorf("Missing one or both required fields 'delivery_threshold' or 'delivery_residual_data' for aggregation type 'byHitTime'")
+			err := fmt.Errorf("Missing one or both required fields 'delivery_threshold_id' or 'delivery_residual_data' for aggregation type 'byHitTime'")
 			return body, err
 		}
 
-		aggregationDetails.DeliveryThreshold = &service.GenericBodyMember{
+		aggregationDetails.DeliveryThreshold = &service.GenericConfigurationParameterElement{
 			ID: dThr.(string),
 		}
 		aggregationDetails.DeliverResidualData = dRdt.(bool)
@@ -158,7 +181,7 @@ func setBody(d *schema.ResourceData) (body service.ConfigurationBody, errMsg err
 
 	encodingObj := d.Get("encoding_details").(map[string]interface{})
 	encodingDetails := service.ConfigurationBodyEncodingDetails{
-		Encoding: service.GenericBodyMember{
+		Encoding: service.GenericConfigurationParameterElement{
 			ID: encodingObj["id"].(string),
 		},
 	}
@@ -183,12 +206,12 @@ func setBody(d *schema.ResourceData) (body service.ConfigurationBody, errMsg err
 
 	switch dType {
 	case "email":
-		deliveryDetails.EmailAddress = ""
+		deliveryDetails.EmailAddress = deliveryObj["email_address"].(string)
 	case "ftp":
-		deliveryDetails.Login = ""
-		deliveryDetails.Password = ""
-		deliveryDetails.Machine = ""
-		deliveryDetails.Directory = ""
+		deliveryDetails.Login = deliveryObj["login"].(string)
+		deliveryDetails.Password = deliveryObj["password"].(string)
+		deliveryDetails.Machine = deliveryObj["machine"].(string)
+		deliveryDetails.Directory = deliveryObj["directory"].(string)
 	case "httpsns4":
 		delCpCodeInt, err := strconv.Atoi(deliveryObj["cp_code"].(string))
 		if err != nil {
