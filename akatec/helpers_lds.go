@@ -1,18 +1,26 @@
 package akatec
 
 import (
-	"bytes"
-	"encoding/json"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
-	"log"
+	"net/url"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/apiheat/go-edgegrid/v6/service/ldsv3"
-	service "github.com/apiheat/go-edgegrid/v6/service/ldsv3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
+
+func getSHAString(rdata string) string {
+	h := sha1.New()
+	h.Write([]byte(rdata))
+
+	sha1hashtest := hex.EncodeToString(h.Sum(nil))
+	return sha1hashtest
+}
 
 func flattenLogSourceDetailsData(l *ldsv3.OutputSourcesElement) map[string]interface{} {
 	lgs := make(map[string]interface{})
@@ -51,6 +59,32 @@ func flattenLogSourceDetailsData(l *ldsv3.OutputSourcesElement) map[string]inter
 	}
 
 	return lgs
+}
+
+func flattenLdsParameter(l *ldsv3.GenericConfigurationParameterElement) map[string]interface{} {
+	lgs := make(map[string]interface{})
+
+	lgs["id"] = l.ID
+	lgs["name"] = l.Value
+
+	return lgs
+}
+
+func flattenLdsNetStorageGroup(l *ldsv3.GenericConfigurationParameterElement) (map[string]interface{}, error) {
+	lgs := make(map[string]interface{})
+
+	lgs["id"] = l.ID
+	lgs["name"] = l.ID
+
+	nsURL, err := url.Parse(l.Value)
+	if err != nil {
+		return lgs, err
+	}
+
+	lgs["cp_code"] = path.Base(nsURL.Path)
+	lgs["domain_prefix"] = strings.Split(l.Value, ".")[0]
+
+	return lgs, nil
 }
 
 func flattenContactDetailsData(l *ldsv3.ConfigurationBodyContactDetails) map[string]interface{} {
@@ -122,33 +156,33 @@ func flattenDeliveryDetailsData(l *ldsv3.ConfigurationBodyDeliveryDetails) map[s
 	return lgs
 }
 
-func setBody(d *schema.ResourceData) (body service.ConfigurationBody, errMsg error) {
-	logSource := service.LogSourceBodyMember{
+func setBody(d *schema.ResourceData) (body ldsv3.ConfigurationBody, errMsg error) {
+	logSource := ldsv3.LogSourceBodyMember{
 		ID:   d.Get("log_source_id").(string),
 		Type: d.Get("log_source_type").(string),
 	}
 
 	contactObj := d.Get("contact_details").(map[string]interface{})
-	contactDetails := service.ConfigurationBodyContactDetails{
+	contactDetails := ldsv3.ConfigurationBodyContactDetails{
 		MailAddresses: strings.Split(contactObj["email_addresses"].(string), ","),
-		Contact: service.GenericConfigurationParameterElement{
+		Contact: ldsv3.GenericConfigurationParameterElement{
 			ID: contactObj["id"].(string),
 		},
 	}
 
-	logFormatDetails := service.ConfigurationBodyLogFormatDetails{
+	logFormatDetails := ldsv3.ConfigurationBodyLogFormatDetails{
 		LogIdentifier: d.Get("log_format_identifier").(string),
-		LogFormat: service.GenericConfigurationParameterElement{
+		LogFormat: ldsv3.GenericConfigurationParameterElement{
 			ID: d.Get("log_format_id").(string),
 		},
 	}
 
-	messageSize := service.GenericConfigurationParameterElement{
+	messageSize := ldsv3.GenericConfigurationParameterElement{
 		ID: d.Get("message_size_id").(string),
 	}
 
 	aggrType := d.Get("aggregation_type").(string)
-	aggregationDetails := service.ConfigurationBodyAggregationDetails{
+	aggregationDetails := ldsv3.ConfigurationBodyAggregationDetails{
 		Type: aggrType,
 	}
 	switch aggrType {
@@ -159,7 +193,7 @@ func setBody(d *schema.ResourceData) (body service.ConfigurationBody, errMsg err
 			return body, fmt.Errorf("Missing required field `delivery_frequency_id` for aggregation type 'byLogArrival'")
 		}
 
-		aggregationDetails.DeliveryFrequency = &service.GenericConfigurationParameterElement{
+		aggregationDetails.DeliveryFrequency = &ldsv3.GenericConfigurationParameterElement{
 			ID: freqID.(string),
 		}
 	case "byHitTime":
@@ -171,7 +205,7 @@ func setBody(d *schema.ResourceData) (body service.ConfigurationBody, errMsg err
 			return body, err
 		}
 
-		aggregationDetails.DeliveryThreshold = &service.GenericConfigurationParameterElement{
+		aggregationDetails.DeliveryThreshold = &ldsv3.GenericConfigurationParameterElement{
 			ID: dThr.(string),
 		}
 		aggregationDetails.DeliverResidualData = dRdt.(bool)
@@ -180,8 +214,8 @@ func setBody(d *schema.ResourceData) (body service.ConfigurationBody, errMsg err
 	}
 
 	encodingObj := d.Get("encoding_details").(map[string]interface{})
-	encodingDetails := service.ConfigurationBodyEncodingDetails{
-		Encoding: service.GenericConfigurationParameterElement{
+	encodingDetails := ldsv3.ConfigurationBodyEncodingDetails{
+		Encoding: ldsv3.GenericConfigurationParameterElement{
 			ID: encodingObj["id"].(string),
 		},
 	}
@@ -198,7 +232,7 @@ func setBody(d *schema.ResourceData) (body service.ConfigurationBody, errMsg err
 	}
 
 	dType := d.Get("delivery_type").(string)
-	deliveryDetails := service.ConfigurationBodyDeliveryDetails{
+	deliveryDetails := ldsv3.ConfigurationBodyDeliveryDetails{
 		Type: dType,
 	}
 
@@ -224,7 +258,7 @@ func setBody(d *schema.ResourceData) (body service.ConfigurationBody, errMsg err
 		return body, fmt.Errorf("Unsupported delivery type")
 	}
 
-	body = service.ConfigurationBody{
+	body = ldsv3.ConfigurationBody{
 		StartDate:          d.Get("start_date").(string),
 		LogSource:          &logSource,
 		ContactDetails:     contactDetails,
@@ -239,30 +273,5 @@ func setBody(d *schema.ResourceData) (body service.ConfigurationBody, errMsg err
 		body.EndDate = d.Get("end_date").(string)
 	}
 
-	outputJSON(body)
-
 	return body, nil
-}
-
-// ToDo: Remove debug function
-func printJSON(str string) {
-	var prettyJSON bytes.Buffer
-	error := json.Indent(&prettyJSON, []byte(str), "", "    ")
-	if error != nil {
-		log.Println("JSON parse error: ", error)
-		return
-	}
-	log.Println(string(prettyJSON.Bytes()))
-	return
-}
-
-// ToDo: Remove debug function
-// OutputJSON displays output of query for alerts in JSON format
-func outputJSON(input interface{}) {
-	b, err := json.Marshal(input)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	printJSON(string(b))
 }

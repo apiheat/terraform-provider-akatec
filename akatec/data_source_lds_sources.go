@@ -2,8 +2,6 @@ package akatec
 
 import (
 	"context"
-	"crypto/sha1"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -82,12 +80,4 @@ func dataLdsSourcesRead(ctx context.Context, d *schema.ResourceData, m interface
 	d.SetId(getSHAString(string(jsonBody)))
 
 	return diags
-}
-
-func getSHAString(rdata string) string {
-	h := sha1.New()
-	h.Write([]byte(rdata))
-
-	sha1hashtest := hex.EncodeToString(h.Sum(nil))
-	return sha1hashtest
 }
