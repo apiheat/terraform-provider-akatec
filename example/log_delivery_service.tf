@@ -112,3 +112,13 @@ resource "akatec_lds_configuration" "terraform" {
     "id" = data.akatec_lds_encoding.terraform.id
   }
 }
+
+output "lds_configuration_id" {
+  value = akatec_lds_configuration.terraform.id
+}
+output "lds_configuration_message_size_name" {
+  value = akatec_lds_configuration.terraform.message_size_name
+}
+output "lds_configuration_name" {
+  value = akatec_lds_configuration.terraform.log_source_details.cp_code
+}

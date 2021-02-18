@@ -18,10 +18,6 @@ func resourceLdsConfiguration() *schema.Resource {
 				ForceNew: true,
 				Computed: true,
 			},
-			"name": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
 			"start_date": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -308,9 +304,6 @@ func resourceLdsConfigurationReadCtx(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 	if err := d.Set("log_source_type", configuration.LogSource.Type); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("name", configuration.LogSource.CpCode); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := d.Set("log_source_details", flattenLogSourceDetailsData(&configuration.LogSource)); err != nil {
