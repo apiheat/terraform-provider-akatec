@@ -2,6 +2,8 @@ package akatec
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -14,7 +16,11 @@ import (
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"edgerc":  {Type: schema.TypeString, Required: true},
+			"edgerc": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "",
+			},
 			"section": {Type: schema.TypeString, Required: true},
 			"ask":     {Type: schema.TypeString, Optional: true}},
 
@@ -31,6 +37,16 @@ func Provider() *schema.Provider {
 			"akatec_lds_log_format":           dataSourceLdsLogFormat(),
 			"akatec_lds_delivery_frequencies": dataSourceLdsDeliveryFrequencies(),
 			"akatec_lds_delivery_frequency":   dataSourceLdsDeliveryFrequency(),
+			"akatec_lds_delivery_thresholds":  dataSourceLdsDeliveryThresholds(),
+			"akatec_lds_delivery_threshold":   dataSourceLdsDeliveryThreshold(),
+			"akatec_lds_contacts":             dataSourceLdsContacts(),
+			"akatec_lds_contact":              dataSourceLdsContact(),
+			"akatec_lds_netstorage_groups":    dataSourceLdsNetStorageGroups(),
+			"akatec_lds_netstorage_group":     dataSourceLdsNetStorageGroup(),
+			"akatec_lds_message_sizes":        dataSourceLdsMessageSizes(),
+			"akatec_lds_message_size":         dataSourceLdsMessageSize(),
+			"akatec_lds_encodings":            dataSourceLdsEncodings(),
+			"akatec_lds_encoding":             dataSourceLdsEncoding(),
 		},
 
 		ProviderMetaSchema:   map[string]*schema.Schema{},
@@ -50,7 +66,21 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		ldsv3:     &akalds.Ldsv3{},
 	}
 
-	creds, err := edgegrid.NewCredentials().FromFile(d.Get("edgerc").(string)).Section(d.Get("section").(string))
+	edgerc := d.Get("edgerc").(string)
+	if edgerc == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  "NewCredentials | Unable to create Akamai client",
+				Detail:   "NewCredentials | Unable to create credentials edgerc file path cannot be found",
+			})
+			return nil, diags
+		}
+		edgerc = fmt.Sprintf("%s/.edgerc", homeDir)
+	}
+
+	creds, err := edgegrid.NewCredentials().FromFile(edgerc).Section(d.Get("section").(string))
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,

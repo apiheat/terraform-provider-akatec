@@ -1,9 +1,3 @@
-provider "akatec" {
-  edgerc = "/Users/rafpe/.edgerc"
-  section = "test"
-  ask = ""
-}
-
 data "akatec_netlist_ip" "terraform_test_1"{
 	id = "12345_TERRAFORMTEST1"
 }
@@ -14,7 +8,7 @@ output "terraform_test_1" {
 }
 
 resource "akatec_netlist_ip" "terraform_test_2" {
-    
+
 	name        = "terraform-test-2"
  	network     = "staging"
   	activate    = false
