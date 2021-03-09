@@ -12,11 +12,12 @@ import (
 func dataSourceLdsDeliveryThresholds() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataLdsDeliveryThresholdsRead,
+		Description: descriptions["delivery_thresholds"],
 		Schema: map[string]*schema.Schema{
 			"thresholds": {
 				Type:        schema.TypeList,
 				Computed:    true,
-				Description: "List of logdelivery service sources",
+				Description: descriptions["delivery_threshold"],
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id":   {Type: schema.TypeString, Computed: true},
@@ -31,6 +32,7 @@ func dataSourceLdsDeliveryThresholds() *schema.Resource {
 func dataSourceLdsDeliveryThreshold() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataLdsDeliveryThresholdRead,
+		Description: descriptions["delivery_threshold"],
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,

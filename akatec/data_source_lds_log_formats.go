@@ -13,10 +13,12 @@ import (
 func dataSourceLdsLogFormats() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataLdsogFormatsRead,
+		Description: descriptions["log_formas"],
 		Schema: map[string]*schema.Schema{
 			"type": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: descriptions["source_type"],
 				ValidateFunc: validation.StringInSlice([]string{
 					"answerx",
 					"cpcode-products",
@@ -27,7 +29,7 @@ func dataSourceLdsLogFormats() *schema.Resource {
 			"formats": {
 				Type:        schema.TypeList,
 				Computed:    true,
-				Description: "List of logdelivery service sources",
+				Description: descriptions["log_format"],
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id":   {Type: schema.TypeString, Computed: true},
@@ -42,10 +44,12 @@ func dataSourceLdsLogFormats() *schema.Resource {
 func dataSourceLdsLogFormat() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataLdsogFormatRead,
+		Description: descriptions["log_format"],
 		Schema: map[string]*schema.Schema{
 			"type": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: descriptions["source_type"],
 				ValidateFunc: validation.StringInSlice([]string{
 					"answerx",
 					"cpcode-products",

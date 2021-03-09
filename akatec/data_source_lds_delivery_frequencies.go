@@ -12,11 +12,12 @@ import (
 func dataSourceLdsDeliveryFrequencies() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataLdsDeliveryFrequenciesRead,
+		Description: descriptions["delivery_frequencies"],
 		Schema: map[string]*schema.Schema{
 			"frequencies": {
 				Type:        schema.TypeList,
 				Computed:    true,
-				Description: "List of logdelivery service sources",
+				Description: descriptions["delivery_frequency"],
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id":   {Type: schema.TypeString, Computed: true},
@@ -31,6 +32,7 @@ func dataSourceLdsDeliveryFrequencies() *schema.Resource {
 func dataSourceLdsDeliveryFrequency() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataLdsDeliveryFrequencyRead,
+		Description: descriptions["delivery_frequency"],
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,

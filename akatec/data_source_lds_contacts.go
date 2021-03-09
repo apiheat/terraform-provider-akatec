@@ -12,11 +12,12 @@ import (
 func dataSourceLdsContacts() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataLdsContactsRead,
+		Description: descriptions["contacts"],
 		Schema: map[string]*schema.Schema{
 			"contacts": {
 				Type:        schema.TypeList,
 				Computed:    true,
-				Description: "List of logdelivery service sources",
+				Description: descriptions["contact"],
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id":   {Type: schema.TypeString, Computed: true},
@@ -31,6 +32,7 @@ func dataSourceLdsContacts() *schema.Resource {
 func dataSourceLdsContact() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataLdsContactRead,
+		Description: descriptions["contact"],
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,

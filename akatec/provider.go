@@ -13,6 +13,8 @@ import (
 	akanetlist "github.com/apiheat/go-edgegrid/v6/service/netlistv2"
 )
 
+var descriptions map[string]string
+
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
@@ -103,4 +105,29 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 
 	return &apiClient, diags
 
+}
+
+func init() {
+	descriptions = map[string]string{
+		"source_type":    "Type of log source for which you can create/request a log delivery configuration.",
+		"contacts":       "List of logdelivery service available contacts",
+		"contact":        "Contact information",
+		"configurations": "List of log delivery service available configurations",
+		"configuration": "You can create one LDS configuration for each log source.\n" +
+			"Once you initially configure an Akamai service for log delivery, you can view, edit,\n" +
+			"and suspend and reactivate that log delivery configuration.",
+		"delivery_frequency":   "Used with aggregation type byLogArrival. Period of time that will be covered by log delivery.",
+		"delivery_frequencies": "List of log delivery service available delivery frequencies",
+		"delivery_threshold": "Used with aggregation type byHitTime. Data completion threshold,\n" +
+			"or the percentage of expected logs to be processed before the log data is sent to you",
+		"delivery_thresholds": "List of log delivery service available delivery thresholds",
+		"encoding":            "Selected encoding option used to encode logs",
+		"encodings":           "List of log delivery service available encoding options",
+		"delivery_type":       "Encapsulates log delivery via supported types",
+		"log_format":          "Selected format for log delivery",
+		"log_formats":         "List of log delivery service available log formats",
+		"message_size":        "Packed log message’s approximate size",
+		"message_sizes":       "List of log delivery service available message sizes",
+		"example":             "",
+	}
 }

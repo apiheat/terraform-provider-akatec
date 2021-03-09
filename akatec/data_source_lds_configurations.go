@@ -13,10 +13,12 @@ import (
 func dataSourceLdsConfigurations() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataLdsConfigurationsRead,
+		Description: descriptions["configurations"],
 		Schema: map[string]*schema.Schema{
 			"source_type": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: descriptions["source_type"],
 				ValidateFunc: validation.StringInSlice([]string{
 					"answerx",
 					"cpcode-products",
@@ -27,7 +29,7 @@ func dataSourceLdsConfigurations() *schema.Resource {
 			"configurations": {
 				Type:        schema.TypeList,
 				Computed:    true,
-				Description: "List of log delivery service configurations",
+				Description: descriptions["configuration"],
 				Elem: &schema.Schema{
 					Type: schema.TypeMap,
 					Elem: &schema.Schema{

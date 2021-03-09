@@ -12,11 +12,12 @@ import (
 func dataSourceLdsMessageSizes() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataLdsMessageSizesRead,
+		Description: descriptions["message_sizes"],
 		Schema: map[string]*schema.Schema{
 			"message_sizes": {
 				Type:        schema.TypeList,
 				Computed:    true,
-				Description: "List of logdelivery service sources",
+				Description: descriptions["message_size"],
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id":   {Type: schema.TypeString, Computed: true},
@@ -31,6 +32,7 @@ func dataSourceLdsMessageSizes() *schema.Resource {
 func dataSourceLdsMessageSize() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataLdsMessageSizeRead,
+		Description: descriptions["message_size"],
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,

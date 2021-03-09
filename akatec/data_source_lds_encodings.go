@@ -13,10 +13,12 @@ import (
 func dataSourceLdsEncodings() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataLdsEncodingsRead,
+		Description: descriptions["encodings"],
 		Schema: map[string]*schema.Schema{
 			"log_source_type": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: descriptions["source_type"],
 				ValidateFunc: validation.StringInSlice([]string{
 					"answerx",
 					"cpcode-products",
@@ -25,8 +27,9 @@ func dataSourceLdsEncodings() *schema.Resource {
 				}, false),
 			},
 			"delivery_type": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: descriptions["delivery_type"],
 				ValidateFunc: validation.StringInSlice([]string{
 					"email",
 					"ftp",
@@ -36,7 +39,7 @@ func dataSourceLdsEncodings() *schema.Resource {
 			"encodings": {
 				Type:        schema.TypeList,
 				Computed:    true,
-				Description: "List of logdelivery service sources",
+				Description: descriptions["encoding"],
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id":   {Type: schema.TypeString, Computed: true},
@@ -51,14 +54,16 @@ func dataSourceLdsEncodings() *schema.Resource {
 func dataSourceLdsEncoding() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataLdsEncodingRead,
+		Description: descriptions["encoding"],
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
 			"log_source_type": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: descriptions["source_type"],
 				ValidateFunc: validation.StringInSlice([]string{
 					"answerx",
 					"cpcode-products",
@@ -67,8 +72,9 @@ func dataSourceLdsEncoding() *schema.Resource {
 				}, false),
 			},
 			"delivery_type": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: descriptions["delivery_type"],
 				ValidateFunc: validation.StringInSlice([]string{
 					"email",
 					"ftp",
